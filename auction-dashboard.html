@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khiran Premier League Auction Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #1e3c72;
+            border-bottom: 3px solid #2a5298;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -3px;
+        }
+        
+        .tab:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .tab.active {
+            color: white;
+            border-bottom-color: #667eea;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .controls input, .controls select {
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .controls input:focus, .controls select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .players-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .players-table th {
+            background: #1e3c72;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        .players-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .players-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .players-table tr.sold {
+            background: #d4edda;
+        }
+        
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .status-available {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-sold {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-sell {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-sell:hover {
+            background: #218838;
+        }
+        
+        .btn-unsell {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-unsell:hover {
+            background: #c82333;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #1e3c72;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+        
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+        
+        .team-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .team-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .team-card-header h3 {
+            color: #1e3c72;
+            font-size: 1.5em;
+            margin: 0;
+        }
+        
+        .team-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .team-stat-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .team-stat-item .label {
+            font-size: 0.8em;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .team-stat-item .value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+        
+        .team-players-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .team-players-table th {
+            background: #f8f9fa;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .team-players-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .team-players-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .no-players {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏏 Khiran Premier League Auction Dashboard</h1>
+            <p>Track your auction in real-time</p>
+            <div style="margin-top: 15px;">
+                <input type="file" id="fileUpload" accept=".xlsx,.xls,.csv" style="display: none;">
+                <button class="action-btn btn-sell" onclick="document.getElementById('fileUpload').click()" style="background: #28a745;">
+                    📁 Load Excel/CSV File
+                </button>
+                <span id="fileStatus" style="margin-left: 15px; color: rgba(255,255,255,0.9); font-size: 0.9em;"></span>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('players')">All Players</button>
+            <button class="tab" onclick="switchTab('teams')">Team Tracker</button>
+        </div>
+        
+        <div class="tab-content active" id="playersTab">
+            <div class="controls">
+                <input type="text" id="searchInput" placeholder="Search players...">
+                <select id="filterStatus">
+                    <option value="all">All Players</option>
+                    <option value="available">Available</option>
+                    <option value="sold">Sold</option>
+                </select>
+                <select id="filterTeam">
+                    <option value="all">All Teams</option>
+                </select>
+                <select id="filterType">
+                    <option value="all">All Types</option>
+                    <option value="Capped">Capped</option>
+                    <option value="Uncapped">Uncapped</option>
+                    <option value="Overseas">Overseas</option>
+                </select>
+                <select id="filterRole">
+                    <option value="all">All Roles</option>
+                </select>
+                <button class="action-btn btn-sell" onclick="openTeamManager()" style="margin-left: auto;">Manage Teams</button>
+            </div>
+            
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <h3>Total Players</h3>
+                    <div class="value" id="totalPlayers">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Players Sold</h3>
+                    <div class="value" id="playersSold">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Players Available</h3>
+                    <div class="value" id="playersAvailable">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Spent</h3>
+                    <div class="value" id="totalSpent">₹0</div>
+                </div>
+            </div>
+            
+            <div class="content">
+                <table class="players-table" id="playersTable">
+                    <thead>
+                        <tr>
+                            <th>Player Name</th>
+                            <th>Role</th>
+                            <th>Type</th>
+                            <th>IPL Team</th>
+                            <th>Base Price</th>
+                            <th>Bought By</th>
+                            <th>Buy Price</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="playersBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="teamsTab">
+            <div class="controls">
+                <button class="action-btn btn-sell" onclick="openTeamManager()">Manage Teams</button>
+            </div>
+            
+            <div class="content" id="teamTrackerContent">
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="sellModal">
+        <div class="modal-content">
+            <h2>Sell Player</h2>
+            <div class="form-group">
+                <label>Player: <span id="modalPlayerName"></span></label>
+            </div>
+            <div class="form-group">
+                <label for="teamSelect">Team</label>
+                <select id="teamSelect"></select>
+            </div>
+            <div class="form-group">
+                <label for="priceInput">Sold Price (₹ Lakhs)</label>
+                <input type="number" id="priceInput" step="0.1" min="0">
+            </div>
+            <div class="modal-actions">
+                <button class="action-btn btn-cancel" onclick="closeSellModal()">Cancel</button>
+                <button class="action-btn btn-sell" onclick="confirmSell()">Confirm Sale</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="teamModal">
+        <div class="modal-content">
+            <h2>Manage KPL Auction Teams</h2>
+            <p style="color: #6c757d; margin-bottom: 20px; font-size: 0.9em;">
+                Add the team names for your Khiran Premier League auction. These will appear in the "Bought By" dropdown.
+            </p>
+            <div class="form-group">
+                <label for="newTeamInput">Add New Team</label>
+                <input type="text" id="newTeamInput" placeholder="e.g., Team Alpha, John's XI, etc.">
+                <button class="action-btn btn-sell" onclick="addTeam()" style="margin-top: 10px;">Add Team</button>
+            </div>
+            <div class="form-group">
+                <label>Current KPL Teams:</label>
+                <div id="teamsList" style="max-height: 200px; overflow-y: auto; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="action-btn btn-cancel" onclick="closeTeamModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="typeModal">
+        <div class="modal-content">
+            <h2>Change Player Type</h2>
+            <div class="form-group">
+                <label>Player: <span id="modalTypeName"></span></label>
+            </div>
+            <div class="form-group">
+                <label for="typeSelect">Select Type</label>
+                <select id="typeSelect">
+                    <option value="Capped">Capped</option>
+                    <option value="Uncapped">Uncapped</option>
+                    <option value="Overseas">Overseas</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="action-btn btn-cancel" onclick="closeTypeModal()">Cancel</button>
+                <button class="action-btn btn-sell" onclick="confirmTypeChange()">Update Type</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let players = [];
+        let teams = [];
+        let currentPlayer = null;
+        let roles = [];
+        let currentTypePlayer = null;
+        
+        // Load Excel file on page load
+        window.onload = function() {
+            // Set up file upload handler
+            document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
+            
+            // Try to load from same directory (works on web servers)
+            tryAutoLoad();
+        };
+        
+        function tryAutoLoad() {
+            // Try CSV first
+            fetch('Auction2_corrected.csv')
+                .then(response => {
+                    if (!response.ok) throw new Error('CSV not found');
+                    return response.text();
+                })
+                .then(csvText => {
+                    const jsonData = parseCSV(csvText);
+                    processData(jsonData);
+                    renderPlayers();
+                    updateStats();
+                    updateFileStatus('✓ Auction2_corrected.csv loaded successfully');
+                })
+                .catch(error => {
+                    // Try Excel if CSV fails
+                    fetch('Auction2.xlsx')
+                        .then(response => {
+                            if (!response.ok) throw new Error('File not found');
+                            return response.arrayBuffer();
+                        })
+                        .then(data => {
+                            const workbook = XLSX.read(data, {type: 'array'});
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                            
+                            processData(jsonData);
+                            renderPlayers();
+                            updateStats();
+                            updateFileStatus('✓ Auction2.xlsx loaded successfully');
+                        })
+                        .catch(error => {
+                            // Auto-load failed, user needs to click the button
+                            updateFileStatus('Click "Load Excel/CSV File" button above to get started');
+                        });
+                });
+        }
+        
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] ? values[index].trim() : '';
+                });
+                data.push(row);
+            }
+            return data;
+        }
+        
+        function updateFileStatus(message) {
+            const status = document.getElementById('fileStatus');
+            if (status) {
+                status.textContent = message;
+            }
+        }
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            updateFileStatus('Loading...');
+            
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.csv')) {
+                // Handle CSV file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const csvText = e.target.result;
+                        const jsonData = parseCSV(csvText);
+                        
+                        processData(jsonData);
+                        renderPlayers();
+                        updateStats();
+                        
+                        updateFileStatus(`✓ ${file.name} loaded successfully (${players.length} players)`);
+                    } catch (error) {
+                        updateFileStatus('❌ Error loading CSV file. Please try again.');
+                        console.error('Error:', error);
+                    }
+                };
+                reader.onerror = function() {
+                    updateFileStatus('❌ Error reading file. Please try again.');
+                };
+                reader.readAsText(file);
+            } else {
+                // Handle Excel file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        processData(jsonData);
+                        renderPlayers();
+                        updateStats();
+                        
+                        updateFileStatus(`✓ ${file.name} loaded successfully (${players.length} players)`);
+                    } catch (error) {
+                        updateFileStatus('❌ Error loading file. Please try again.');
+                        console.error('Error:', error);
+                    }
+                };
+                reader.onerror = function() {
+                    updateFileStatus('❌ Error reading file. Please try again.');
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+        
+        function processData(data) {
+            players = data.map((row, index) => ({
+                id: index,
+                name: row['Player'] || row['Player Name'] || 'Unknown',
+                role: row['Role'] || 'All-rounder',
+                type: row['Type'] || 'Uncapped',
+                basePrice: parseFloat(row[' Base Price '] || row[' Base Price'] || row['Base Price'] || 0),
+                team: row['Bought By'] || row['Team'] || null,
+                soldPrice: parseFloat(row[' Buy Price '] || row[' Buy Price'] || row['Buy Price'] || 0) || null,
+                iplTeam: row['IPL Team'] || null,
+                status: (row['Bought By'] || row[' Buy Price ']) ? 'sold' : 'available'
+            }));
+            
+            // Extract unique IPL teams (for reference, not for auction teams)
+            const iplTeamSet = new Set();
+            players.forEach(p => {
+                if (p.iplTeam) iplTeamSet.add(p.iplTeam);
+            });
+            
+            // Extract teams that have bought players
+            const boughtBySet = new Set();
+            players.forEach(p => {
+                if (p.team) boughtBySet.add(p.team);
+            });
+            
+            // Load mock auction teams from localStorage
+            const savedTeams = localStorage.getItem('auctionTeams');
+            if (savedTeams) {
+                teams = JSON.parse(savedTeams);
+            } else {
+                // Start with empty teams - user needs to add their mock auction teams
+                teams = [];
+            }
+            
+            // Add any teams from "Bought By" that aren't in the list
+            boughtBySet.forEach(t => {
+                if (!teams.includes(t)) teams.push(t);
+            });
+            teams.sort();
+            
+            // Extract unique roles
+            const roleSet = new Set();
+            players.forEach(p => {
+                if (p.role) roleSet.add(p.role);
+            });
+            roles = Array.from(roleSet).sort();
+            
+            // Populate dropdowns
+            populateTeamDropdowns();
+            populateRoleDropdown();
+            
+            // Show team manager on first load if no teams exist
+            if (teams.length === 0) {
+                setTimeout(() => {
+                    if (confirm('No KPL teams found. Would you like to add your team names now?')) {
+                        openTeamManager();
+                    }
+                }, 500);
+            }
+        }
+        
+        function populateTeamDropdowns() {
+            const filterTeam = document.getElementById('filterTeam');
+            const teamSelect = document.getElementById('teamSelect');
+            
+            // Clear existing options except first
+            filterTeam.innerHTML = '<option value="all">All Teams</option>';
+            teamSelect.innerHTML = '';
+            
+            teams.forEach(team => {
+                const option1 = document.createElement('option');
+                option1.value = team;
+                option1.textContent = team;
+                filterTeam.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = team;
+                option2.textContent = team;
+                teamSelect.appendChild(option2);
+            });
+        }
+        
+        function populateRoleDropdown() {
+            const filterRole = document.getElementById('filterRole');
+            filterRole.innerHTML = '<option value="all">All Roles</option>';
+            
+            roles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role;
+                option.textContent = role;
+                filterRole.appendChild(option);
+            });
+        }
+        
+        function renderPlayers() {
+            const tbody = document.getElementById('playersBody');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            const teamFilter = document.getElementById('filterTeam').value;
+            const typeFilter = document.getElementById('filterType').value;
+            const roleFilter = document.getElementById('filterRole').value;
+            
+            const filteredPlayers = players.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(searchTerm) || 
+                                     p.role.toLowerCase().includes(searchTerm);
+                const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+                const matchesTeam = teamFilter === 'all' || p.team === teamFilter;
+                const matchesType = typeFilter === 'all' || p.type === typeFilter;
+                const matchesRole = roleFilter === 'all' || p.role === roleFilter;
+                
+                return matchesSearch && matchesStatus && matchesTeam && matchesType && matchesRole;
+            });
+            
+            tbody.innerHTML = filteredPlayers.map(player => `
+                <tr class="${player.status === 'sold' ? 'sold' : ''}">
+                    <td><strong>${player.name}</strong></td>
+                    <td>${player.role}</td>
+                    <td>
+                        <span class="status-badge ${getTypeBadgeClass(player.type)}" style="cursor: pointer;" onclick="openEditTypeModal(${player.id})" title="Click to change type">
+                            ${player.type}
+                        </span>
+                    </td>
+                    <td>${player.iplTeam || '-'}</td>
+                    <td>₹${player.basePrice} L</td>
+                    <td>${player.team || '-'}</td>
+                    <td>${player.soldPrice ? '₹' + player.soldPrice + ' L' : '-'}</td>
+                    <td>
+                        <span class="status-badge status-${player.status}">
+                            ${player.status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td>
+                        ${player.status === 'available' 
+                            ? `<button class="action-btn btn-sell" onclick="openSellModal(${player.id})">Sell</button>`
+                            : `<button class="action-btn btn-unsell" onclick="unsellPlayer(${player.id})">Unsell</button>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function getTypeBadgeClass(type) {
+            if (type === 'Capped') return 'status-sold';
+            if (type === 'Overseas') return 'status-available';
+            return '';
+        }
+        
+        function openEditTypeModal(playerId) {
+            currentTypePlayer = players.find(p => p.id === playerId);
+            document.getElementById('modalTypeName').textContent = currentTypePlayer.name;
+            document.getElementById('typeSelect').value = currentTypePlayer.type;
+            document.getElementById('typeModal').classList.add('active');
+        }
+        
+        function closeTypeModal() {
+            document.getElementById('typeModal').classList.remove('active');
+            currentTypePlayer = null;
+        }
+        
+        function confirmTypeChange() {
+            const newType = document.getElementById('typeSelect').value;
+            currentTypePlayer.type = newType;
+            closeTypeModal();
+            renderPlayers();
+        }
+        
+        function updateStats() {
+            const totalPlayers = players.length;
+            const playersSold = players.filter(p => p.status === 'sold').length;
+            const playersAvailable = totalPlayers - playersSold;
+            const totalSpent = players.reduce((sum, p) => sum + (p.soldPrice || 0), 0);
+            
+            document.getElementById('totalPlayers').textContent = totalPlayers;
+            document.getElementById('playersSold').textContent = playersSold;
+            document.getElementById('playersAvailable').textContent = playersAvailable;
+            document.getElementById('totalSpent').textContent = '₹' + totalSpent.toFixed(1) + ' L';
+        }
+        
+        function openSellModal(playerId) {
+            currentPlayer = players.find(p => p.id === playerId);
+            document.getElementById('modalPlayerName').textContent = currentPlayer.name;
+            document.getElementById('priceInput').value = currentPlayer.basePrice;
+            document.getElementById('sellModal').classList.add('active');
+        }
+        
+        function closeSellModal() {
+            document.getElementById('sellModal').classList.remove('active');
+            currentPlayer = null;
+        }
+        
+        function confirmSell() {
+            const team = document.getElementById('teamSelect').value;
+            const price = parseFloat(document.getElementById('priceInput').value);
+            
+            if (!team) {
+                alert('Please select a team');
+                return;
+            }
+            
+            if (!price || price < 0) {
+                alert('Please enter a valid price');
+                return;
+            }
+            
+            currentPlayer.team = team;
+            currentPlayer.soldPrice = price;
+            currentPlayer.status = 'sold';
+            
+            // Add team to list if new
+            if (!teams.includes(team)) {
+                teams.push(team);
+                teams.sort();
+                populateTeamDropdowns();
+            }
+            
+            closeSellModal();
+            renderPlayers();
+            updateStats();
+            renderTeamTracker();
+        }
+        
+        function unsellPlayer(playerId) {
+            const player = players.find(p => p.id === playerId);
+            player.team = null;
+            player.soldPrice = null;
+            player.status = 'available';
+            
+            renderPlayers();
+            updateStats();
+            renderTeamTracker();
+        }
+        
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'players') {
+                document.getElementById('playersTab').classList.add('active');
+            } else if (tabName === 'teams') {
+                document.getElementById('teamsTab').classList.add('active');
+                renderTeamTracker();
+            }
+        }
+        
+        function renderTeamTracker() {
+            const container = document.getElementById('teamTrackerContent');
+            
+            if (teams.length === 0) {
+                container.innerHTML = '<div class="no-players">No teams added yet. Click "Manage Teams" to add teams.</div>';
+                return;
+            }
+            
+            const teamData = teams.map(teamName => {
+                const teamPlayers = players.filter(p => p.team === teamName);
+                const totalSpent = teamPlayers.reduce((sum, p) => sum + (p.soldPrice || 0), 0);
+                
+                // Count by role
+                const roleCount = {};
+                teamPlayers.forEach(p => {
+                    roleCount[p.role] = (roleCount[p.role] || 0) + 1;
+                });
+                
+                // Count by type
+                const typeCount = {
+                    'Capped': 0,
+                    'Uncapped': 0,
+                    'Overseas': 0
+                };
+                teamPlayers.forEach(p => {
+                    typeCount[p.type] = (typeCount[p.type] || 0) + 1;
+                });
+                
+                return {
+                    name: teamName,
+                    players: teamPlayers,
+                    totalSpent: totalSpent,
+                    playerCount: teamPlayers.length,
+                    roleCount: roleCount,
+                    typeCount: typeCount
+                };
+            });
+            
+            container.innerHTML = teamData.map(team => `
+                <div class="team-card">
+                    <div class="team-card-header">
+                        <h3>${team.name}</h3>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.9em; color: #6c757d;">Total Spent</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #1e3c72;">₹${team.totalSpent.toFixed(1)} L</div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-stats">
+                        <div class="team-stat-item">
+                            <div class="label">Players</div>
+                            <div class="value">${team.playerCount}</div>
+                        </div>
+                        <div class="team-stat-item">
+                            <div class="label">Capped</div>
+                            <div class="value">${team.typeCount.Capped}</div>
+                        </div>
+                        <div class="team-stat-item">
+                            <div class="label">Uncapped</div>
+                            <div class="value">${team.typeCount.Uncapped}</div>
+                        </div>
+                        <div class="team-stat-item">
+                            <div class="label">Overseas</div>
+                            <div class="value">${team.typeCount.Overseas}</div>
+                        </div>
+                        <div class="team-stat-item">
+                            <div class="label">Batsmen</div>
+                            <div class="value">${team.roleCount['Batsman'] || 0}</div>
+                        </div>
+                        <div class="team-stat-item">
+                            <div class="label">Bowlers</div>
+                            <div class="value">${team.roleCount['Bowler'] || 0}</div>
+                        </div>
+                        <div class="team-stat-item">
+                            <div class="label">All-Rounders</div>
+                            <div class="value">${team.roleCount['All-Rounder'] || 0}</div>
+                        </div>
+                        <div class="team-stat-item">
+                            <div class="label">Wicketkeepers</div>
+                            <div class="value">${team.roleCount['Wicketkeeper'] || 0}</div>
+                        </div>
+                    </div>
+                    
+                    ${team.players.length > 0 ? `
+                        <table class="team-players-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Role</th>
+                                    <th>Type</th>
+                                    <th>IPL Team</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${team.players.map(player => `
+                                    <tr>
+                                        <td><strong>${player.name}</strong></td>
+                                        <td>${player.role}</td>
+                                        <td><span class="status-badge ${getTypeBadgeClass(player.type)}">${player.type}</span></td>
+                                        <td>${player.iplTeam || '-'}</td>
+                                        <td>₹${player.soldPrice} L</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<div class="no-players">No players bought yet</div>'}
+                </div>
+            `).join('');
+        }
+        
+        function openEditTypeModal(playerId) {
+            const player = players.find(p => p.id === playerId);
+            const newType = prompt(`Change type for ${player.name}\n\nCurrent: ${player.type}\n\nEnter: Capped, Uncapped, or Overseas`, player.type);
+            
+            if (newType && ['Capped', 'Uncapped', 'Overseas'].includes(newType)) {
+                player.type = newType;
+                renderPlayers();
+            }
+        }
+        
+        function openTeamManager() {
+            updateTeamsList();
+            document.getElementById('teamModal').classList.add('active');
+        }
+        
+        function closeTeamModal() {
+            document.getElementById('teamModal').classList.remove('active');
+        }
+        
+        function updateTeamsList() {
+            const teamsList = document.getElementById('teamsList');
+            if (teams.length === 0) {
+                teamsList.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">No teams added yet. Add your KPL team names above.</p>';
+                return;
+            }
+            teamsList.innerHTML = teams.map(team => `
+                <div style="padding: 8px; background: white; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                    <span><strong>${team}</strong></span>
+                    <button class="action-btn btn-unsell" style="padding: 4px 8px; font-size: 0.8em;" onclick="removeTeam('${team}')">Remove</button>
+                </div>
+            `).join('');
+        }
+        
+        function addTeam() {
+            const input = document.getElementById('newTeamInput');
+            const teamName = input.value.trim();
+            
+            if (!teamName) {
+                alert('Please enter a team name');
+                return;
+            }
+            
+            if (teams.includes(teamName)) {
+                alert('Team already exists');
+                return;
+            }
+            
+            teams.push(teamName);
+            teams.sort();
+            localStorage.setItem('auctionTeams', JSON.stringify(teams));
+            
+            populateTeamDropdowns();
+            updateTeamsList();
+            input.value = '';
+        }
+        
+        function removeTeam(teamName) {
+            if (confirm(`Remove team "${teamName}"? Players bought by this team will remain assigned.`)) {
+                teams = teams.filter(t => t !== teamName);
+                localStorage.setItem('auctionTeams', JSON.stringify(teams));
+                populateTeamDropdowns();
+                updateTeamsList();
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', renderPlayers);
+        document.getElementById('filterStatus').addEventListener('change', renderPlayers);
+        document.getElementById('filterTeam').addEventListener('change', renderPlayers);
+        document.getElementById('filterType').addEventListener('change', renderPlayers);
+        document.getElementById('filterRole').addEventListener('change', renderPlayers);
+    </script>
+
+</body>
+</html>
