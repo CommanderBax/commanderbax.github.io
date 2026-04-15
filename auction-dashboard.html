@@ -428,8 +428,11 @@
                     <option value="available">Available</option>
                     <option value="sold">Sold</option>
                 </select>
+                <select id="filterIplTeam">
+                    <option value="all">All IPL Teams</option>
+                </select>
                 <select id="filterTeam">
-                    <option value="all">All Teams</option>
+                    <option value="all">All KPL Teams</option>
                 </select>
                 <select id="filterType">
                     <option value="all">All Types</option>
@@ -564,6 +567,7 @@
         let roles = [];
         let currentTypePlayer = null;
         let syncEnabled = false;
+        let iplTeams = [];
         
         // Initialize Firebase listeners
         function initFirebaseSync() {
@@ -647,8 +651,8 @@
         };
         
         function tryAutoLoad() {
-            // Try CSV first
-            fetch('Auction2_corrected.csv')
+            // Try new CSV first
+            fetch('KPL Round 2.csv')
                 .then(response => {
                     if (!response.ok) throw new Error('CSV not found');
                     return response.text();
@@ -658,28 +662,43 @@
                     processData(jsonData);
                     renderPlayers();
                     updateStats();
-                    updateFileStatus('✓ Auction2_corrected.csv loaded successfully');
+                    updateFileStatus('✓ KPL Round 2.csv loaded successfully');
                 })
                 .catch(error => {
-                    // Try Excel if CSV fails
-                    fetch('Auction2.xlsx')
+                    // Try old CSV if new one fails
+                    fetch('Auction2_corrected.csv')
                         .then(response => {
-                            if (!response.ok) throw new Error('File not found');
-                            return response.arrayBuffer();
+                            if (!response.ok) throw new Error('CSV not found');
+                            return response.text();
                         })
-                        .then(data => {
-                            const workbook = XLSX.read(data, {type: 'array'});
-                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                            
+                        .then(csvText => {
+                            const jsonData = parseCSV(csvText);
                             processData(jsonData);
                             renderPlayers();
                             updateStats();
-                            updateFileStatus('✓ Auction2.xlsx loaded successfully');
+                            updateFileStatus('✓ Auction2_corrected.csv loaded successfully');
                         })
                         .catch(error => {
-                            // Auto-load failed, user needs to click the button
-                            updateFileStatus('Click "Load Excel/CSV File" button above to get started');
+                            // Try Excel if CSV fails
+                            fetch('Auction2.xlsx')
+                                .then(response => {
+                                    if (!response.ok) throw new Error('File not found');
+                                    return response.arrayBuffer();
+                                })
+                                .then(data => {
+                                    const workbook = XLSX.read(data, {type: 'array'});
+                                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                                    
+                                    processData(jsonData);
+                                    renderPlayers();
+                                    updateStats();
+                                    updateFileStatus('✓ Auction2.xlsx loaded successfully');
+                                })
+                                .catch(error => {
+                                    // Auto-load failed, user needs to click the button
+                                    updateFileStatus('Click "Load Excel/CSV File" button above to get started');
+                                });
                         });
                 });
         }
@@ -782,6 +801,7 @@
             players.forEach(p => {
                 if (p.iplTeam) iplTeamSet.add(p.iplTeam);
             });
+            iplTeams = Array.from(iplTeamSet).sort();
             
             // Extract teams that have bought players
             const boughtBySet = new Set();
@@ -816,6 +836,7 @@
             
             // Populate dropdowns
             populateTeamDropdowns();
+            populateIplTeamDropdown();
             populateRoleDropdown();
             
             // Sync to Firebase
@@ -832,12 +853,24 @@
             }
         }
         
+        function populateIplTeamDropdown() {
+            const filterIplTeam = document.getElementById('filterIplTeam');
+            filterIplTeam.innerHTML = '<option value="all">All IPL Teams</option>';
+            
+            iplTeams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team;
+                option.textContent = team;
+                filterIplTeam.appendChild(option);
+            });
+        }
+        
         function populateTeamDropdowns() {
             const filterTeam = document.getElementById('filterTeam');
             const teamSelect = document.getElementById('teamSelect');
             
             // Clear existing options except first
-            filterTeam.innerHTML = '<option value="all">All Teams</option>';
+            filterTeam.innerHTML = '<option value="all">All KPL Teams</option>';
             teamSelect.innerHTML = '';
             
             teams.forEach(team => {
@@ -870,6 +903,7 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const statusFilter = document.getElementById('filterStatus').value;
             const teamFilter = document.getElementById('filterTeam').value;
+            const iplTeamFilter = document.getElementById('filterIplTeam').value;
             const typeFilter = document.getElementById('filterType').value;
             const roleFilter = document.getElementById('filterRole').value;
             
@@ -878,10 +912,11 @@
                                      p.role.toLowerCase().includes(searchTerm);
                 const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
                 const matchesTeam = teamFilter === 'all' || p.team === teamFilter;
+                const matchesIplTeam = iplTeamFilter === 'all' || p.iplTeam === iplTeamFilter;
                 const matchesType = typeFilter === 'all' || p.type === typeFilter;
                 const matchesRole = roleFilter === 'all' || p.role === roleFilter;
                 
-                return matchesSearch && matchesStatus && matchesTeam && matchesType && matchesRole;
+                return matchesSearch && matchesStatus && matchesTeam && matchesIplTeam && matchesType && matchesRole;
             });
             
             tbody.innerHTML = filteredPlayers.map(player => `
@@ -1203,6 +1238,7 @@
         document.getElementById('searchInput').addEventListener('input', renderPlayers);
         document.getElementById('filterStatus').addEventListener('change', renderPlayers);
         document.getElementById('filterTeam').addEventListener('change', renderPlayers);
+        document.getElementById('filterIplTeam').addEventListener('change', renderPlayers);
         document.getElementById('filterType').addEventListener('change', renderPlayers);
         document.getElementById('filterRole').addEventListener('change', renderPlayers);
     </script>
