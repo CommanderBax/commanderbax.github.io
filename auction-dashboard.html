@@ -507,8 +507,8 @@
                 <select id="teamSelect"></select>
             </div>
             <div class="form-group">
-                <label for="priceInput">Sold Price (₹ Lakhs)</label>
-                <input type="number" id="priceInput" step="0.1" min="0">
+                <label for="priceInput">Sold Price (₹ Crores)</label>
+                <input type="number" id="priceInput" step="0.01" min="0">
             </div>
             <div class="modal-actions">
                 <button class="action-btn btn-cancel" onclick="closeSellModal()">Cancel</button>
@@ -929,9 +929,9 @@
                         </span>
                     </td>
                     <td>${player.iplTeam || '-'}</td>
-                    <td>₹${player.basePrice} L</td>
+                    <td>₹${player.basePrice} Cr</td>
                     <td>${player.team || '-'}</td>
-                    <td>${player.soldPrice ? '₹' + player.soldPrice + ' L' : '-'}</td>
+                    <td>${player.soldPrice ? '₹' + player.soldPrice + ' Cr' : '-'}</td>
                     <td>
                         <span class="status-badge status-${player.status}">
                             ${player.status.toUpperCase()}
@@ -982,7 +982,7 @@
             document.getElementById('totalPlayers').textContent = totalPlayers;
             document.getElementById('playersSold').textContent = playersSold;
             document.getElementById('playersAvailable').textContent = playersAvailable;
-            document.getElementById('totalSpent').textContent = '₹' + totalSpent.toFixed(1) + ' L';
+            document.getElementById('totalSpent').textContent = '₹' + totalSpent.toFixed(2) + ' Cr';
         }
         
         function openSellModal(playerId) {
@@ -1102,7 +1102,7 @@
                         <h3>${team.name}</h3>
                         <div style="text-align: right;">
                             <div style="font-size: 0.9em; color: #6c757d;">Total Spent</div>
-                            <div style="font-size: 1.8em; font-weight: bold; color: #1e3c72;">₹${team.totalSpent.toFixed(1)} L</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #1e3c72;">₹${team.totalSpent.toFixed(2)} Cr</div>
                         </div>
                     </div>
                     
@@ -1159,7 +1159,7 @@
                                         <td>${player.role}</td>
                                         <td><span class="status-badge ${getTypeBadgeClass(player.type)}">${player.type}</span></td>
                                         <td>${player.iplTeam || '-'}</td>
-                                        <td>₹${player.soldPrice} L</td>
+                                        <td>₹${player.soldPrice} Cr</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
