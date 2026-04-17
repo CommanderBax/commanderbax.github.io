@@ -364,6 +364,27 @@
             color: #1e3c72;
         }
         
+        .team-stat-item.infraction {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+        }
+        
+        .team-stat-item.infraction .label {
+            color: #721c24;
+            font-weight: bold;
+        }
+        
+        .team-stat-item.infraction .value {
+            color: #dc3545;
+        }
+        
+        .infraction-text {
+            font-size: 0.75em;
+            color: #721c24;
+            margin-top: 3px;
+            font-weight: 600;
+        }
+        
         .team-players-table {
             width: 100%;
             border-collapse: collapse;
@@ -1086,13 +1107,25 @@
                     typeCount[p.type] = (typeCount[p.type] || 0) + 1;
                 });
                 
+                // Check infractions
+                const infractions = {
+                    batsmen: (roleCount['Batsman'] || 0) < 4,
+                    bowlers: (roleCount['Bowler'] || 0) < 5,
+                    allRounders: (roleCount['All-Rounder'] || 0) < 3,
+                    wicketkeepers: (roleCount['Wicketkeeper'] || 0) < 2,
+                    uncapped: typeCount['Uncapped'] < 4,
+                    overseasMin: typeCount['Overseas'] < 6,
+                    overseasMax: typeCount['Overseas'] > 8
+                };
+                
                 return {
                     name: teamName,
                     players: teamPlayers,
                     totalSpent: totalSpent,
                     playerCount: teamPlayers.length,
                     roleCount: roleCount,
-                    typeCount: typeCount
+                    typeCount: typeCount,
+                    infractions: infractions
                 };
             });
             
@@ -1111,33 +1144,40 @@
                             <div class="label">Players</div>
                             <div class="value">${team.playerCount}</div>
                         </div>
+                        <div class="team-stat-item ${team.infractions.uncapped ? 'infraction' : ''}">
+                            <div class="label">Uncapped ${team.infractions.uncapped ? '⚠️' : ''}</div>
+                            <div class="value">${team.typeCount.Uncapped}</div>
+                            ${team.infractions.uncapped ? '<div class="infraction-text">Min: 4</div>' : ''}
+                        </div>
                         <div class="team-stat-item">
                             <div class="label">Capped</div>
                             <div class="value">${team.typeCount.Capped}</div>
                         </div>
-                        <div class="team-stat-item">
-                            <div class="label">Uncapped</div>
-                            <div class="value">${team.typeCount.Uncapped}</div>
-                        </div>
-                        <div class="team-stat-item">
-                            <div class="label">Overseas</div>
+                        <div class="team-stat-item ${team.infractions.overseasMin || team.infractions.overseasMax ? 'infraction' : ''}">
+                            <div class="label">Overseas ${team.infractions.overseasMin || team.infractions.overseasMax ? '⚠️' : ''}</div>
                             <div class="value">${team.typeCount.Overseas}</div>
+                            ${team.infractions.overseasMin ? '<div class="infraction-text">Min: 6</div>' : ''}
+                            ${team.infractions.overseasMax ? '<div class="infraction-text">Max: 8</div>' : ''}
                         </div>
-                        <div class="team-stat-item">
-                            <div class="label">Batsmen</div>
+                        <div class="team-stat-item ${team.infractions.batsmen ? 'infraction' : ''}">
+                            <div class="label">Batsmen ${team.infractions.batsmen ? '⚠️' : ''}</div>
                             <div class="value">${team.roleCount['Batsman'] || 0}</div>
+                            ${team.infractions.batsmen ? '<div class="infraction-text">Min: 4</div>' : ''}
                         </div>
-                        <div class="team-stat-item">
-                            <div class="label">Bowlers</div>
+                        <div class="team-stat-item ${team.infractions.bowlers ? 'infraction' : ''}">
+                            <div class="label">Bowlers ${team.infractions.bowlers ? '⚠️' : ''}</div>
                             <div class="value">${team.roleCount['Bowler'] || 0}</div>
+                            ${team.infractions.bowlers ? '<div class="infraction-text">Min: 5</div>' : ''}
                         </div>
-                        <div class="team-stat-item">
-                            <div class="label">All-Rounders</div>
+                        <div class="team-stat-item ${team.infractions.allRounders ? 'infraction' : ''}">
+                            <div class="label">All-Rounders ${team.infractions.allRounders ? '⚠️' : ''}</div>
                             <div class="value">${team.roleCount['All-Rounder'] || 0}</div>
+                            ${team.infractions.allRounders ? '<div class="infraction-text">Min: 3</div>' : ''}
                         </div>
-                        <div class="team-stat-item">
-                            <div class="label">Wicketkeepers</div>
+                        <div class="team-stat-item ${team.infractions.wicketkeepers ? 'infraction' : ''}">
+                            <div class="label">Wicketkeepers ${team.infractions.wicketkeepers ? '⚠️' : ''}</div>
                             <div class="value">${team.roleCount['Wicketkeeper'] || 0}</div>
+                            ${team.infractions.wicketkeepers ? '<div class="infraction-text">Min: 2</div>' : ''}
                         </div>
                     </div>
                     
