@@ -385,6 +385,25 @@
             font-weight: 600;
         }
         
+        .sortable th {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .sortable th:hover {
+            background: #2a5298;
+        }
+        
+        .sort-arrow {
+            font-size: 0.8em;
+            opacity: 0.5;
+            margin-left: 5px;
+        }
+        
+        .sortable th:hover .sort-arrow {
+            opacity: 1;
+        }
+        
         .team-players-table {
             width: 100%;
             border-collapse: collapse;
@@ -487,17 +506,17 @@
             </div>
             
             <div class="content">
-                <table class="players-table" id="playersTable">
+                <table class="players-table sortable" id="playersTable">
                     <thead>
                         <tr>
-                            <th>Player Name</th>
-                            <th>Role</th>
-                            <th>Type</th>
-                            <th>IPL Team</th>
-                            <th>Base Price</th>
-                            <th>Bought By</th>
-                            <th>Buy Price</th>
-                            <th>Status</th>
+                            <th onclick="sortTable(0)">Player Name <span class="sort-arrow">⇅</span></th>
+                            <th onclick="sortTable(1)">Role <span class="sort-arrow">⇅</span></th>
+                            <th onclick="sortTable(2)">Type <span class="sort-arrow">⇅</span></th>
+                            <th onclick="sortTable(3)">IPL Team <span class="sort-arrow">⇅</span></th>
+                            <th onclick="sortTable(4)">Base Price <span class="sort-arrow">⇅</span></th>
+                            <th onclick="sortTable(5)">Bought By <span class="sort-arrow">⇅</span></th>
+                            <th onclick="sortTable(6)">Buy Price <span class="sort-arrow">⇅</span></th>
+                            <th onclick="sortTable(7)">Status <span class="sort-arrow">⇅</span></th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -1182,14 +1201,14 @@
                     </div>
                     
                     ${team.players.length > 0 ? `
-                        <table class="team-players-table">
+                        <table class="team-players-table sortable">
                             <thead>
                                 <tr>
-                                    <th>Player</th>
-                                    <th>Role</th>
-                                    <th>Type</th>
-                                    <th>IPL Team</th>
-                                    <th>Price</th>
+                                    <th onclick="sortTeamTable(this, 0)">Player <span class="sort-arrow">⇅</span></th>
+                                    <th onclick="sortTeamTable(this, 1)">Role <span class="sort-arrow">⇅</span></th>
+                                    <th onclick="sortTeamTable(this, 2)">Type <span class="sort-arrow">⇅</span></th>
+                                    <th onclick="sortTeamTable(this, 3)">IPL Team <span class="sort-arrow">⇅</span></th>
+                                    <th onclick="sortTeamTable(this, 4)">Price <span class="sort-arrow">⇅</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1199,7 +1218,7 @@
                                         <td>${player.role}</td>
                                         <td><span class="status-badge ${getTypeBadgeClass(player.type)}">${player.type}</span></td>
                                         <td>${player.iplTeam || '-'}</td>
-                                        <td>₹${player.soldPrice} Cr</td>
+                                        <td data-value="${player.soldPrice}">₹${player.soldPrice} Cr</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1281,6 +1300,77 @@
         document.getElementById('filterIplTeam').addEventListener('change', renderPlayers);
         document.getElementById('filterType').addEventListener('change', renderPlayers);
         document.getElementById('filterRole').addEventListener('change', renderPlayers);
+        
+        // Sorting functionality
+        let sortDirection = {};
+        
+        function sortTable(columnIndex) {
+            const table = document.getElementById('playersTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Toggle sort direction
+            const key = 'col' + columnIndex;
+            sortDirection[key] = sortDirection[key] === 'asc' ? 'desc' : 'asc';
+            const direction = sortDirection[key];
+            
+            rows.sort((a, b) => {
+                let aValue = a.cells[columnIndex].textContent.trim();
+                let bValue = b.cells[columnIndex].textContent.trim();
+                
+                // Handle price columns (remove ₹ and Cr)
+                if (columnIndex === 4 || columnIndex === 6) {
+                    aValue = parseFloat(aValue.replace(/[₹Cr\s]/g, '')) || 0;
+                    bValue = parseFloat(bValue.replace(/[₹Cr\s]/g, '')) || 0;
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                }
+                
+                // String comparison
+                if (direction === 'asc') {
+                    return aValue.localeCompare(bValue);
+                } else {
+                    return bValue.localeCompare(aValue);
+                }
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
+        
+        function sortTeamTable(header, columnIndex) {
+            const table = header.closest('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Toggle sort direction
+            const key = 'team' + table.parentElement.parentElement.querySelector('h3').textContent + columnIndex;
+            sortDirection[key] = sortDirection[key] === 'asc' ? 'desc' : 'asc';
+            const direction = sortDirection[key];
+            
+            rows.sort((a, b) => {
+                let aValue, bValue;
+                
+                // Handle price column (has data-value attribute)
+                if (columnIndex === 4) {
+                    aValue = parseFloat(a.cells[columnIndex].getAttribute('data-value')) || 0;
+                    bValue = parseFloat(b.cells[columnIndex].getAttribute('data-value')) || 0;
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                }
+                
+                // String comparison
+                aValue = a.cells[columnIndex].textContent.trim();
+                bValue = b.cells[columnIndex].textContent.trim();
+                
+                if (direction === 'asc') {
+                    return aValue.localeCompare(bValue);
+                } else {
+                    return bValue.localeCompare(aValue);
+                }
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
     </script>
 
 </body>
